@@ -1,0 +1,47 @@
+- name: ensure prerequisite Windows Features are installed
+  win_feature:
+    name: Server-Media-Foundation, AS-HTTP-Activation, Desktop-Experience, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, Web-Mgmt-Console, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation, RSAT-ADDS
+    state: present
+  async: 3600
+  poll: 5
+  register: feature_out
+
+- win_reboot:
+  when: feature_out.restart_needed == true
+
+# If we rebooted, wait awhile for Windows post-reboot feature servicing (which can trigger further reboots without our knowledge).
+# Should be a way to detect servicing-in-progress so we don't have to wait arbitrarily; see:
+# https://windowsserver.uservoice.com/forums/301869-powershell/suggestions/16277737-block-winrm-operations-during-servicing
+- name: wait for servicing stability
+  local_action: shell sleep 200
+  changed_when: false
+  when: feature_out.restart_needed == true
+
+- name: ensure prerequisite packages are installed
+  win_chocolatey:
+    name: "{{ item }}"
+    state: present
+    allow_empty_checksums: yes
+    ignore_checksums: yes
+  async: 3600
+  poll: 5
+  with_items:
+  - dotnet4.6.1
+  - ucma4
+
+- name: request queued update of ngen assemblies
+  win_shell: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\ngen.exe update /queue
+  changed_when: false
+
+- name: ensure ngen queue is drained
+  win_shell: c:\Windows\Microsoft.NET\Framework64\v4.0.30319\ngen.exe executeQueuedItems
+  changed_when: false
+
+- name: Ensure Exchange AD schema state
+  async: 7200
+  poll: 60
+  win_shell: echo "do ad install"  # '{{ exchange_source_root }}\setup.exe /PrepareAD /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+  run_once: yes
+  # schema version from table at https://technet.microsoft.com/en-us/library/bb125224(v=exchg.160).aspx#Anchor_4
+  # TODO: add schema/system_ver checks as well
+  when: exchange_ad_prep_needed

@@ -1,0 +1,52 @@
+- name: assert required vars
+  assert: 
+    that:
+    - exchange_source_root is defined
+    - exchange_org_name is defined
+     
+- name: Get installed Exchange server info
+  win_exchange_facts:
+  ignore_errors: true
+  register: exchfacts
+
+- name: Get Exchange org container version
+  win_shell: (Get-ADObject -Filter 'ObjectClass -eq "msExchOrganizationContainer"' -SearchBase "CN={{ exchange_org_name  }},CN=Microsoft Exchange,CN=Services,$(([adsi]"LDAP://rootDSE").configurationNamingContext.Value)" -Properties "objectversion").ObjectVersion
+  ignore_errors: true
+  changed_when: false
+  register: org_objectversion_out
+  tags:
+  - checkad
+
+- name: Get Exchange build version from install media
+  win_file_version:
+    path: '{{ exchange_source_root }}setup.exe'
+  register: install_media_file_version_out
+
+- name: determine changes
+  set_fact:
+    exchange_ad_prep_needed: "{{ org_objectversion_out | failed or org_objectversion_out.stdout | int < (exchange_schema_version_map[exchange_build_version].org_ver | default(0)) }}"
+    exchange_install_needed: "{{ exchfacts | failed or exchange_facts.ServerRole != 'Mailbox' }}"
+    exchange_upgrade_needed: "{{ exchange_build_version | default(0) != 0 and exchange_build_version | version_compare(install_media_file_version_out.win_file_version.product_version, '<') }}"
+
+- name: setup preflight
+  include: setup_preflight.yml
+  when: exchange_ad_prep_needed or exchange_install_needed or exchange_upgrade_needed
+
+- name: Install Exchange mailbox role
+  async: 7200
+  poll: 60
+  win_shell: echo "do mailbox install"  # '{{ exchange_source_root }}setup.exe /mode:install /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+  register: installmailbox_out
+  when: exchange_install_needed
+
+- name: Upgrade Exchange mailbox role
+  async: 7200
+  poll: 60
+  win_shell: echo "do mailbox upgrade" # '{{ exchange_source_root }}setup.exe /mode:upgrade /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+  register: upgrademailbox_out
+  when: exchange_upgrade_needed and not exchange_install_needed
+
+- name: Reboot if changes were applied
+  win_reboot:
+  when: installmailbox_out | changed or upgrademailbox_out | changed
+

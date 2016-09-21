@@ -1,0 +1,21 @@
+exchange_schema_version_map:
+  15.01.0544.027:
+    name: Exchange 2016 CU3
+    schema_ver: 15326
+    system_ver: 13236
+    org_ver: 16212
+  15.01.0466.034:
+    name: Exchange 2016 CU2
+    schema_ver: 15325
+    system_ver: 13236
+    org_ver: 16212
+  15.01.0396.030:
+    name: Exchange 2016 CU1
+    schema_ver: 15323
+    system_ver: 13236
+    org_ver: 16211
+  15.01.0225.042:
+    name: Exchange 2016 RTM
+    schema_ver: 15317
+    system_ver: 13236
+    org_ver: 16210
