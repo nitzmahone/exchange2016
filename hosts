@@ -1,0 +1,11 @@
+[exchange_mailbox]
+#exch1.ansibletest.corp
+exch2.ansibletest.corp
+
+[exchange_mailbox:vars]
+ansible_connection=winrm
+ansible_winrm_transport=kerberos
+ansible_winrm_kerberos_delegation=true
+ansible_user=testadmin@ANSIBLETEST.CORP
+ansible_winrm_server_cert_validation=ignore
+
