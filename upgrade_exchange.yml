@@ -1,0 +1,44 @@
+- hosts: exchange_mailbox
+  gather_facts: no
+  serial: 1
+  vars:
+    exchange_source_root: d:\
+    exchange_disk_image_path: c:\exch\ExchangeServer2016-x64-cu3.iso
+    exchange_org_name: testorg
+  pre_tasks:
+  - name: ensure Exchange media is available
+    win_disk_image: 
+      image_path: "{{ exchange_disk_image_path }}"
+    when: exchange_disk_image_path is defined
+    register: diskimage_out
+ 
+  - name: set source media var
+    set_fact:
+      exchange_source_root: "{{ diskimage_out.mount_path }}"
+    when: exchange_disk_image_path is defined
+
+  - name: set server inactive
+    win_exchange_componentstate:
+      component: ServerWideOffline
+      state: inactive
+
+  - name: disable server on load balancer
+    bigip_virtual_server:
+      address: "{{ inventory_hostname }}"
+      state: disabled
+      delegate_to: load_balancer
+
+  roles:
+  - exchange
+
+  post_tasks:
+  - name: set server active
+    win_exchange_componentstate:
+      component: ServerWideOffline
+      state: active
+
+  - name: enable server on load balancer
+    bigip_virtual_server:
+      address: "{{ inventory_hostname }}"
+      state: enabled
+      delegate_to: load_balancer
