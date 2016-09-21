@@ -1,7 +1,8 @@
 - hosts: exchange_mailbox
   gather_facts: no
   vars:
-    exchange_source_root: c:\exchdvd
+    exchange_source_root: d:\
+    exchange_disk_image_path: c:\exch\ExchangeServer2016-x64-cu3.iso
     exchange_org_name: testorg
     exchange_schema_version_map:
       15.01.0544.027:
@@ -25,6 +26,15 @@
         system_ver: 13236
         org_ver: 16210
   tasks:
+  - name: ensure Exchange media is available
+    win_disk_image: 
+      image_path: "{{ exchange_disk_image_path }}"
+    register: diskimage_out
+ 
+  - name: set source media var
+    set_fact:
+      exchange_source_root: diskimage_out.mount_path
+     
   - name: ensure prerequisite Windows Features are installed
     win_feature:
       name: Server-Media-Foundation, AS-HTTP-Activation, Desktop-Experience, NET-Framework-45-Features, RPC-over-HTTP-proxy, RSAT-Clustering, RSAT-Clustering-CmdInterface, RSAT-Clustering-Mgmt, RSAT-Clustering-PowerShell, Web-Mgmt-Console, WAS-Process-Model, Web-Asp-Net45, Web-Basic-Auth, Web-Client-Auth, Web-Digest-Auth, Web-Dir-Browsing, Web-Dyn-Compression, Web-Http-Errors, Web-Http-Logging, Web-Http-Redirect, Web-Http-Tracing, Web-ISAPI-Ext, Web-ISAPI-Filter, Web-Lgcy-Mgmt-Console, Web-Metabase, Web-Mgmt-Console, Web-Mgmt-Service, Web-Net-Ext45, Web-Request-Monitor, Web-Server, Web-Stat-Compression, Web-Static-Content, Web-Windows-Auth, Web-WMI, Windows-Identity-Foundation, RSAT-ADDS
@@ -68,6 +78,11 @@
 #      url: https://download.microsoft.com/download/C/6/C/C6C10C1B-EFD8-4AE7-AEE1-C04F45869F5D/ExchangeServer2016-x64-CU2.iso
 #      dest: c:\ExchangeServer2016-x64-CU2.iso
 
+  - name: Get installed Exchange server info
+    win_exchange_facts:
+    ignore_errors: true
+    register: exchfacts
+
   - name: Get Exchange org container version
     win_shell: (Get-ADObject -Filter 'ObjectClass -eq "msExchOrganizationContainer"' -SearchBase "CN={{ exchange_org_name  }},CN=Microsoft Exchange,CN=Services,$(([adsi]"LDAP://rootDSE").configurationNamingContext.Value)" -Properties "objectversion").ObjectVersion
     ignore_errors: true
@@ -79,10 +94,10 @@
   - name: Ensure AD Prep
     async: 7200
     poll: 60
-    win_shell: '{{ exchange_source_root }}\setup.exe /PrepareAD /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+    win_shell: echo "do ad install"  # '{{ exchange_source_root }}\setup.exe /PrepareAD /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
     run_once: yes
     # schema version from table at https://technet.microsoft.com/en-us/library/bb125224(v=exchg.160).aspx#Anchor_4
-    # TODO: add schema/system_ver checks
+    # TODO: add schema/system_ver checks as well
     when: org_objectversion_out | failed or org_objectversion_out.stdout | int < (exchange_schema_version_map[exchange_build_version].org_ver | default(0))
     tags:
     - never
@@ -92,15 +107,10 @@
       path: '{{ exchange_source_root }}setup.exe'
     register: install_media_file_version_out
 
-  - name: Get installed Exchange server info
-    win_exchange_facts:
-    ignore_errors: true
-    register: exchfacts
-
   - name: Install Exchange mailbox role
     async: 7200
     poll: 60
-    win_shell: '{{ exchange_source_root }}setup.exe /mode:install /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+    win_shell: echo "do mailbox install"  # '{{ exchange_source_root }}setup.exe /mode:install /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
     register: installmailbox_out
     when: exchfacts | failed or exchange_facts.ServerRole != "Mailbox"
 

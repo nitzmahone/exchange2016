@@ -17,7 +17,7 @@ Try {
 
   $res = @{
     ansible_facts=@{
-      exchange_facts=$ges_result; 
+      exchange_facts=$ges_result[0]; 
       exchange_component_states=$formatted_cs;
       exchange_build_version=$setup_build_version;
     }
