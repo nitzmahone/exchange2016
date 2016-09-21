@@ -11,7 +11,17 @@ Try {
   $formatted_cs = @{}
   $cs_result | Foreach-Object { $formatted_cs[$_.Component] = @{State=$_.State} }
 
-  $res = @{ansible_facts=@{exchange_facts=$ges_result; component_states=$formatted_cs}}
+  $setup_path = [System.IO.Path]::Combine($env:ExchangeInstallPath, "bin\setup.exe")
+
+  $setup_build_version = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($setup_path).ProductVersion
+
+  $res = @{
+    ansible_facts=@{
+      exchange_facts=$ges_result; 
+      exchange_component_states=$formatted_cs;
+      exchange_build_version=$setup_build_version;
+    }
+  }
 
 }
 Catch {
