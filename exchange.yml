@@ -107,14 +107,26 @@
       path: '{{ exchange_source_root }}setup.exe'
     register: install_media_file_version_out
 
+  - name: set install/upgrade
+    set_fact:
+      exchange_install_needed: "{{ exchfacts | failed or exchange_facts.ServerRole != 'Mailbox' }}"
+      exchange_upgrade_needed: "{{ exchange_build_version | default(0) != 0 and exchange_build_version | version_compare(install_media_file_version_out.win_file_version.product_version, '<') }}"
+
   - name: Install Exchange mailbox role
     async: 7200
     poll: 60
     win_shell: echo "do mailbox install"  # '{{ exchange_source_root }}setup.exe /mode:install /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
     register: installmailbox_out
-    when: exchfacts | failed or exchange_facts.ServerRole != "Mailbox"
+    when: exchange_install_needed
+
+  - name: Upgrade Exchange mailbox role
+    async: 7200
+    poll: 60
+    win_shell: echo "do mailbox upgrade" # '{{ exchange_source_root }}setup.exe /mode:upgrade /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+    register: upgrademailbox_out
+    when: exchange_upgrade_needed and not exchange_install_needed
 
   - name: Reboot if changes were applied
     win_reboot:
-    when: installmailbox_out | changed
+    when: installmailbox_out | changed or upgrademailbox_out | changed
 
