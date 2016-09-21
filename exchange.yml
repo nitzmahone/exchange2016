@@ -12,6 +12,6 @@
  
   - name: set source media var
     set_fact:
-      exchange_source_root: diskimage_out.mount_path
+      exchange_source_root: "{{ diskimage_out.mount_path }}"
   roles:
   - exchange
