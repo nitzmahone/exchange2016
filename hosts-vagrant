@@ -1,0 +1,10 @@
+[exchange_mailbox]
+winclient.ansible.vagrant
+
+[exchange_mailbox:vars]
+ansible_connection=winrm
+ansible_winrm_transport=kerberos
+ansible_winrm_kerberos_delegation=true
+ansible_user=testguy@ANSIBLE.VAGRANT
+ansible_winrm_server_cert_validation=ignore
+

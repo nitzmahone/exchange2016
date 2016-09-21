@@ -34,15 +34,15 @@
 
 - name: Install Exchange mailbox role
   async: 7200
-  poll: 60
-  win_shell: echo "do mailbox install"  # '{{ exchange_source_root }}setup.exe /mode:install /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+  poll: 10
+  win_shell: '{{ exchange_source_root }}setup.exe /mode:install /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
   register: installmailbox_out
   when: exchange_install_needed
 
 - name: Upgrade Exchange mailbox role
   async: 7200
-  poll: 60
-  win_shell: echo "do mailbox upgrade" # '{{ exchange_source_root }}setup.exe /mode:upgrade /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
+  poll: 10
+  win_shell: '{{ exchange_source_root }}setup.exe /mode:upgrade /role:mailbox /on:"{{ exchange_org_name }}" /IAcceptExchangeServerLicenseTerms'
   register: upgrademailbox_out
   when: exchange_upgrade_needed and not exchange_install_needed
 

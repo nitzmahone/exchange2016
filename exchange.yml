@@ -8,10 +8,12 @@
   - name: ensure Exchange media is available
     win_disk_image: 
       image_path: "{{ exchange_disk_image_path }}"
+    when: exchange_disk_image_path is defined
     register: diskimage_out
  
   - name: set source media var
     set_fact:
       exchange_source_root: "{{ diskimage_out.mount_path }}"
+    when: exchange_disk_image_path is defined
   roles:
   - exchange
