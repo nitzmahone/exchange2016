@@ -10,8 +10,8 @@ $parsed_args = Parse-Args $args
 
 $result = @{changed=$false}
 
-$component_name = Get-AnsibleParam $parsed_args "component_name" -default "ServerWideOffline"
-$state = Get-AnsibleParam $parsed_args "state" -failifempty $result -validateset "active","draining"
+$component_name = Get-AnsibleParam $parsed_args "component" -default "ServerWideOffline"
+$state = Get-AnsibleParam $parsed_args "state" -failifempty $result -validateset "active","inactive"
 
 $cu = "http://$($env:COMPUTERNAME).$($env:USERDNSDOMAIN)/Powershell"
 
@@ -21,7 +21,7 @@ Try {
   $current_state = $gcs_result.State
   
   If($current_state -ne $state) {
-    $scs_result = Invoke-Command -ConnectionUri $cu -Authentication Kerberos -ConfigurationName Microsoft.Exchange -ScriptBlock { Set-ServerComponentState -Identity $args[0] -Component $args[1] -State $args[2] -RequesterMaintenance } -Args $env:COMPUTERNAME,$component_name,$state
+    $scs_result = Invoke-Command -ConnectionUri $cu -Authentication Kerberos -ConfigurationName Microsoft.Exchange -ScriptBlock { Set-ServerComponentState -Identity $args[0] -Component $args[1] -State $args[2] -Requester Maintenance } -Args $env:COMPUTERNAME,$component_name,$state
     $result.changed = $true
   }
 }
