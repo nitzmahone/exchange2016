@@ -5,6 +5,7 @@
     exchange_source_root: d:\
     exchange_disk_image_path: c:\exch\ExchangeServer2016-x64-cu3.iso
     exchange_org_name: testorg
+
   pre_tasks:
   - name: ensure Exchange media is available
     win_disk_image: 
